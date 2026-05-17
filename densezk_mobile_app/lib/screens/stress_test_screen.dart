@@ -19,6 +19,10 @@ class _StressTestScreenState extends State<StressTestScreen> {
   final _graphRootController = TextEditingController(text: '0xabc123');
   final _thresholdController = TextEditingController(text: '1');
 
+  bool _stressLoading = false;
+  bool _benchmarkLoading = false;
+
+
   @override
   void dispose() {
     _iterationsController.dispose();
@@ -32,6 +36,7 @@ class _StressTestScreenState extends State<StressTestScreen> {
 
   Future<void> _runStressTest() async {
     if (!_formKey.currentState!.validate()) return;
+    setState(() => _stressLoading = true);
     await context.read<DenseZkProvider>().runStressTest(
           iterations: int.parse(_iterationsController.text),
           senderId: int.parse(_senderController.text),
@@ -40,6 +45,7 @@ class _StressTestScreenState extends State<StressTestScreen> {
           graphRoot: _graphRootController.text,
           threshold: int.parse(_thresholdController.text),
         );
+    setState(() => _stressLoading = false);
   }
 
   @override
@@ -115,15 +121,33 @@ class _StressTestScreenState extends State<StressTestScreen> {
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton.icon(
-                    onPressed: provider.isLoading ? null : _runStressTest,
-                    icon: provider.isLoading
+                    onPressed: (_stressLoading || _benchmarkLoading) ? null : _runStressTest,
+                    icon: _stressLoading
                         ? const SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.speed),
-                    label: Text(provider.isLoading ? 'Running...' : 'Run Stress Test'),
+                    label: Text(_stressLoading  ? 'Running...' : 'Run Stress Test'),
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    onPressed: (_stressLoading || _benchmarkLoading) ? null : () async {
+                      setState(() => _benchmarkLoading = true);
+                      await context.read<DenseZkProvider>().runConcurrencyBenchmark(
+                        iterations: int.parse(_iterationsController.text),
+                      );
+                      setState(() => _benchmarkLoading = false);
+                    },
+                    icon: _benchmarkLoading
+                        ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                        : const Icon(Icons.bar_chart),
+                    label: Text(_benchmarkLoading ? 'Running...' : 'Run Concurrency Benchmark'),
                   ),
                   if (provider.error.isNotEmpty) ...[
                     const SizedBox(height: 16),
@@ -137,6 +161,10 @@ class _StressTestScreenState extends State<StressTestScreen> {
                     const SizedBox(height: 16),
                     _buildStressResults(provider.stressResults!),
                   ],
+                  if (provider.benchmarkResults != null) ...[
+                    const SizedBox(height: 16),
+                    _buildBenchmarkResults(provider.benchmarkResults!),
+                  ],
                 ],
               ),
             ),
@@ -147,9 +175,9 @@ class _StressTestScreenState extends State<StressTestScreen> {
   }
 
   Widget _buildStressResults(Map<String, dynamic> results) {
-    final successCount = results['success_count'] as int;
-    final failCount = results['fail_count'] as int;
-    final successRate = results['success_rate'] as String;
+    final successCount = results['success_count'] as int? ?? 0;
+    final failCount = results['fail_count'] as int? ?? 0;
+    final successRate = results['success_rate'] as String? ?? "0%";
 
     return Card(
       child: Padding(
@@ -168,6 +196,7 @@ class _StressTestScreenState extends State<StressTestScreen> {
             _buildResultRow('Success Rate', successRate),
             if (results['total_time_ms'] != null) ...[
               const Divider(),
+              _buildResultRow('Parallel Time', '${results['parallel_time_ms']} ms'),
               _buildResultRow('Total Time', '${results['total_time_ms']} ms'),
               _buildResultRow('Avg Time', '${results['avg_time_ms']} ms'),
               _buildResultRow('Min Time', '${results['min_time_ms']} ms'),
@@ -209,6 +238,37 @@ class _StressTestScreenState extends State<StressTestScreen> {
       decoration: InputDecoration(labelText: label, hintText: hint),
       keyboardType: TextInputType.number,
       validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+    );
+  }
+
+  Widget _buildBenchmarkResults(Map<String, dynamic> results) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Concurrency Benchmark',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Same test with different concurrency levels',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            _buildResultRow('Sequential (1x)', '${results['concurrency_1']} ms'),
+            _buildResultRow('2 Concurrent',   '${results['concurrency_2']} ms'),
+            _buildResultRow('4 Concurrent',   '${results['concurrency_4']} ms'),
+            _buildResultRow('8 Concurrent',   '${results['concurrency_8']} ms'),
+            const Divider(),
+            _buildResultRow('2x Speedup', results['speedup_2x'] as String),
+            _buildResultRow('4x Speedup', results['speedup_4x'] as String),
+            _buildResultRow('8x Speedup', results['speedup_8x'] as String),
+          ],
+        ),
+      ),
     );
   }
 }

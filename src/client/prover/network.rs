@@ -49,13 +49,15 @@ struct ErrorResponse {
 pub mod async_client {
     use super::*;
     use reqwest::Client;
+    use std::sync::Arc;
     use tokio::sync::Semaphore;
     use tokio::time::{sleep, Duration};
 
+    #[derive(Clone)]
     pub struct ProverNetworkClientAsync {
         config: ProverNetworkConfig,
         client: Client,
-        semaphore: Semaphore,
+        semaphore: Arc<Semaphore>,
     }
 
     impl ProverNetworkClientAsync {
@@ -65,7 +67,7 @@ pub mod async_client {
                 .build()
                 .map_err(|e| DenseZKError::NetworkError(e.to_string()))?;
 
-            let semaphore = Semaphore::new(config.max_concurrency as usize);
+            let semaphore = Arc::new(Semaphore::new(config.max_concurrency as usize));
 
             Ok(Self {
                 config,
@@ -159,7 +161,7 @@ pub mod async_client {
                 let this = Self {
                     config: self.config.clone(),
                     client: self.client.clone(),
-                    semaphore: Semaphore::new(self.config.max_concurrency as usize),
+                    semaphore: Arc::clone(&self.semaphore),
                 };
                 handles.push(tokio::spawn(async move { this.prove(witness, inputs).await }));
             }
@@ -199,16 +201,6 @@ pub mod async_client {
             &self.config
         }
     }
-
-    impl Clone for ProverNetworkClientAsync {
-        fn clone(&self) -> Self {
-            Self {
-                config: self.config.clone(),
-                client: self.client.clone(),
-                semaphore: Semaphore::new(self.config.max_concurrency as usize),
-            }
-        }
-    }
 }
 
 #[cfg(feature = "async")]
@@ -219,6 +211,7 @@ pub mod sync_client {
     use super::*;
     use crate::prover::local::ZKProof;
     use std::sync::mpsc;
+    use std::sync::Arc;
     use std::thread;
 
     pub struct ProverNetworkClientSync {
@@ -306,15 +299,44 @@ pub mod sync_client {
             }
 
             let count = witnesses.len();
+            let max_concurrent = self.config.max_concurrency as usize;
             let (tx, rx) = mpsc::channel();
-            let mut handles = Vec::new();
+            let semaphore = Arc::new((
+                std::sync::Mutex::new(0usize),
+                std::sync::Condvar::new(),
+            ));
+            let work_items: Vec<_> = witnesses
+                .into_iter()
+                .zip(public_inputs.into_iter())
+                .collect();
 
-            for (witness, inputs) in witnesses.into_iter().zip(public_inputs.into_iter()) {
+            let mut handles = Vec::with_capacity(work_items.len());
+
+            for (witness, inputs) in work_items {
                 let config = self.config.clone();
                 let tx = tx.clone();
+                let semaphore = Arc::clone(&semaphore);
+
                 let handle = thread::spawn(move || {
+                    {
+                        let (lock, cvar) = &*semaphore;
+                        let mut count = lock.lock().unwrap();
+                        while *count >= max_concurrent {
+                            count = cvar.wait(count).unwrap();
+                        }
+                        *count += 1;
+                    }
+
                     let client = Self { config };
                     let result = client.prove(witness, inputs);
+
+                    {
+                        let (lock, cvar) = &*semaphore;
+                        let mut count = lock.lock().unwrap();
+                        *count -= 1;
+                        cvar.notify_one();
+                    }
+
                     let _ = tx.send(result);
                 });
                 handles.push(handle);

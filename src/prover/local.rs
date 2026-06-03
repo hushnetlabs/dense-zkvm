@@ -13,7 +13,7 @@ use crate::client::prover::ClientWitness;
 use crate::error::DenseZKError;
 use crate::rel1cs::types::PublicInputs;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ZKProof {
     pub proof_bytes: Vec<u8>,
     pub root_commitment: String,

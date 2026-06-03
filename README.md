@@ -2,6 +2,10 @@
 
 A Rust SDK for the DenseZK graph-native zero-knowledge virtual machine. Generates Groth16 proofs locally using the arkworks ecosystem. Ships with native Rust and React Native (WASM) targets.
 
+## Contact
++ [mail](contact@hushnetlabs)
++ [slack](slack.com)
+
 ## Overview
 
 DenseZK enables privacy-preserving decentralized social networking. A user's device generates a cryptographic witness locally, then produces a zk-SNARK proof -- all without exposing private graph data.

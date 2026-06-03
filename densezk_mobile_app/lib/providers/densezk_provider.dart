@@ -37,6 +37,28 @@ class DenseZkProvider extends ChangeNotifier {
   Map<String, dynamic>? get stressResults => _stressResults;
   String get serverUrl => _api.baseUrl;
 
+  Map<String, dynamic>? get benchmarkResults => _benchmarkResults;
+  Map<String, dynamic>? _benchmarkResults;
+
+  Future<void> runConcurrencyBenchmark({
+    required int iterations,
+  }) async {
+    _isLoading = true;
+    _error = '';
+    _benchmarkResults = null;
+    notifyListeners();
+
+    try {
+      _benchmarkResults = await _api.runConcurrencyBenchmark(
+        iterations: iterations,
+      );
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
   Future<void> setServerUrl(String url) async {
     _api.setBaseUrl(url);
     final prefs = await SharedPreferences.getInstance();

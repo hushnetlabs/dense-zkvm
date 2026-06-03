@@ -37,3 +37,11 @@ impl DenseClient {
         Ok(ClientWitness { edge, commitment })
     }
 }
+
+pub mod network;
+
+pub use network::ProverNetworkConfig;
+pub use network::ProverNetworkClientAsync;
+
+#[cfg(feature = "sync")]
+pub use network::ProverNetworkClientSync;

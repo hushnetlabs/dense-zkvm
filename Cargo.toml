@@ -43,14 +43,25 @@ actix-cors = { version = "0.7", optional = true }
 env_logger = { version = "0.11", optional = true }
 log = { version = "0.4", optional = true }
 
+# Async networking
+tokio = { version = "1", features = ["rt", "sync", "time", "macros"], optional = true }
+reqwest = { version = "0.12", features = ["json", "blocking"] }
+
 [features]
-default = []
+default = ["async"]
+async = ["tokio"]
+sync = []
 server = ["actix-web", "actix-cors", "env_logger", "log"]
 
 [[bin]]
 name = "densezk-server"
 path = "src/bin/server.rs"
 required-features = ["server"]
+
+[[bin]]
+name = "network-benchmark"
+path = "src/bin/network_benchmark.rs"
+required-features = ["sync"]
 
 [profile.release]
 opt-level = "s"

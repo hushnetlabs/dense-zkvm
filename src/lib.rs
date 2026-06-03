@@ -8,6 +8,10 @@ pub mod rel1cs;
 pub mod wasm;
 
 pub use client::prover::DenseClient;
+pub use client::prover::ProverNetworkConfig;
+pub use client::prover::ProverNetworkClientAsync;
+#[cfg(feature = "sync")]
+pub use client::prover::ProverNetworkClientSync;
 pub use error::DenseZKError;
 pub use prover::local::{LocalProver, ZKProof};
 pub use rel1cs::types::{GraphEdge, PublicInputs};

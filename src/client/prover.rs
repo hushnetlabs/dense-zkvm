@@ -3,7 +3,7 @@ use crate::error::DenseZKError;
 use crate::rel1cs::types::GraphEdge;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ClientWitness {
     pub edge: GraphEdge,
     pub commitment: String,

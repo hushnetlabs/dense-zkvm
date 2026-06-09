@@ -36,6 +36,7 @@ console_error_panic_hook = "0.1"
 getrandom = { version = "0.2", features = ["js"] }
 
 thiserror = "1.0"
+clap = { version = "4", features = ["derive"] }
 
 # Server dependencies (only for native builds)
 actix-web = { version = "4", optional = true }

@@ -33,16 +33,29 @@ impl ConstraintSynthesizer<Fr> for DenseZKCircuit {
         let threshold = Fr::from(self.public_inputs.threshold);
         let threshold_pub = cs.new_input_variable(|| Ok(threshold))?;
 
-        let one = cs.new_witness_variable(|| Ok(Fr::from(1u64)))?;
+        let diff_value = if self.witness.edge.weight >= self.public_inputs.threshold {
+            self.witness.edge.weight - self.public_inputs.threshold
+        } else {
+            0 
+        };
 
-        cs.enforce_constraint(lc!() + sender, lc!() + one, lc!() + sender)?;
+        let mut diff_lc = lc!();
+        let mut two_i = Fr::from(1u64);
 
-        cs.enforce_constraint(lc!() + receiver, lc!() + one, lc!() + receiver)?;
+        for i in 0..64 {
+            let bit_val = (diff_value >> i) & 1;
+            let bit_var = cs.new_witness_variable(|| Ok(Fr::from(bit_val)))?;
 
-        cs.enforce_constraint(lc!() + weight, lc!() + one, lc!() + weight)?;
+            cs.enforce_constraint(lc!() + bit_var, lc!() + bit_var, lc!() + bit_var)?;
+            diff_lc = diff_lc + (two_i, bit_var);
+            two_i = two_i + two_i;
+        }
 
-        cs.enforce_constraint(lc!() + threshold_pub, lc!() + one, lc!() + threshold_pub)?;
-
+        cs.enforce_constraint(
+            lc!() + threshold_pub + &diff_lc,
+            lc!() + ark_relations::r1cs::Variable::One,
+            lc!() + weight,
+        )?;
         Ok(())
     }
 }

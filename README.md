@@ -177,7 +177,10 @@ rustup target add wasm32-unknown-unknown
 cargo build --target wasm32-unknown-unknown --release
 ```
 
+```markdown
 ### WASM with JS bindings (requires wasm-pack)
+
+> **Note:** Make sure `wasm-pack` is installed and available in your system PATH before running the build command.
 
 ```bash
 cargo install wasm-pack

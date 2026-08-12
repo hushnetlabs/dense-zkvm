@@ -3,8 +3,8 @@
 A Rust SDK for the DenseZK graph-native zero-knowledge virtual machine. Generates Groth16 proofs locally using the arkworks ecosystem. Ships with native Rust and React Native (WASM) targets.
 
 ## Contact
-+ [mail](contact@hushnetlabs)
-+ [slack](slack.com)
++ [mail](mailto:contact@hushnetlabs.com)
++ [slack](https://slack.com)
 
 ## Overview
 
